@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ViDi Training Control Panel</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <!-- Toast container -->
+    <div class="toast-container" id="toasts"></div>
+
+    <!-- Header -->
+    <div class="header">
+        <h1>ViDi Training Control Panel</h1>
+        <div id="header-status" class="status disconnected">Disconnected</div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <div class="tab active" data-tab="connection">Connection</div>
+        <div class="tab" data-tab="workspaces">Workspaces</div>
+        <div class="tab" data-tab="import">Import</div>
+        <div class="tab" data-tab="training">Training</div>
+        <div class="tab" data-tab="jobs">Jobs</div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+
+        <!-- ============================================================= -->
+        <!-- CONNECTION TAB -->
+        <!-- ============================================================= -->
+        <div id="panel-connection" class="tab-panel active">
+            <div class="card">
+                <h2>ViDi Server Settings</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Server Host</label>
+                        <input type="text" id="cfg-host" placeholder="10.0.0.102">
+                    </div>
+                    <div class="form-group" style="max-width:120px">
+                        <label>Port</label>
+                        <input type="number" id="cfg-port" placeholder="8042">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Upload Share Path (for local file upload)</label>
+                    <input type="text" id="cfg-share" placeholder="\\\\10.0.0.102\\VidiShare\\uploads">
+                </div>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                    <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+                    <button class="btn btn-secondary" id="btn-test" onclick="testConnection()">Test Connection</button>
+                </div>
+                <div id="conn-result" style="margin-top:12px;font-size:14px"></div>
+            </div>
+
+            <div class="card">
+                <h2>GPU Devices</h2>
+                <div id="gpu-info" class="gpu-info">Connect to server to see GPU info</div>
+            </div>
+        </div>
+
+        <!-- ============================================================= -->
+        <!-- WORKSPACES TAB -->
+        <!-- ============================================================= -->
+        <div id="panel-workspaces" class="tab-panel">
+            <div class="card">
+                <h2>Create Workspace</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Workspace Name</label>
+                        <input type="text" id="ws-name" placeholder="MyProject">
+                    </div>
+                    <div class="form-group">
+                        <label>Tool Name</label>
+                        <input type="text" id="ws-tool-name" value="Analyze">
+                    </div>
+                    <div class="form-group">
+                        <label>Tool Type</label>
+                        <select id="ws-tool-type">
+                            <option value="red">Red (Analyze/Segment)</option>
+                            <option value="blue">Blue (Locate/Detect)</option>
+                            <option value="green">Green (Classify)</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="createWorkspace()">Create Workspace</button>
+            </div>
+
+            <div class="card">
+                <h2>Open Workspaces</h2>
+                <table>
+                    <thead>
+                        <tr><th>Name</th><th>Path</th><th>Actions</th></tr>
+                    </thead>
+                    <tbody id="ws-tbody">
+                        <tr><td colspan="3" class="empty">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ============================================================= -->
+        <!-- IMPORT TAB -->
+        <!-- ============================================================= -->
+        <div id="panel-import" class="tab-panel">
+            <div class="card">
+                <h2>Import Images + Annotations</h2>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Workspace</label>
+                        <select id="import-ws" class="ws-selector">
+                            <option value="">-- Select workspace --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tool Type</label>
+                        <select id="import-tool-type">
+                            <option value="red">Red (Analyze)</option>
+                            <option value="blue">Blue (Locate)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Import class: Good or Bad -->
+                <div class="form-group">
+                    <label>Image Class</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="import-class" value="good" checked onchange="toggleImportClass()"> Good (no defects)</label>
+                        <label><input type="radio" name="import-class" value="bad" onchange="toggleImportClass()"> Bad (with annotations)</label>
+                    </div>
+                </div>
+
+                <!-- Bad-only options -->
+                <div id="import-bad-options" style="display:none">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Annotation Format</label>
+                            <select id="import-format">
+                                <option value="yolo_seg">YOLO Segmentation</option>
+                                <option value="yolo_bbox">YOLO Bounding Box</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Defect Class Name</label>
+                            <input type="text" id="import-defect-class" value="bad">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Source: server paths or local upload -->
+                <div class="form-group" style="margin-top:8px">
+                    <label>Source</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="import-mode" value="server" checked onchange="toggleImportMode()"> Server Paths</label>
+                        <label><input type="radio" name="import-mode" value="upload" onchange="toggleImportMode()"> Local Upload</label>
+                    </div>
+                </div>
+
+                <!-- Server path mode -->
+                <div id="import-server-paths">
+                    <div class="form-group">
+                        <label>Image Directory (on ViDi server)</label>
+                        <input type="text" id="import-img-dir" placeholder="Z:\\Images\\train\\good">
+                    </div>
+                    <div class="form-group" id="import-lbl-dir-group" style="display:none">
+                        <label>Label Directory (on ViDi server)</label>
+                        <input type="text" id="import-lbl-dir" placeholder="Z:\\Images\\train\\labels_seg">
+                    </div>
+                    <button class="btn btn-primary" onclick="startImportServer()">Start Import</button>
+                </div>
+
+                <!-- Local upload mode -->
+                <div id="import-local-upload" style="display:none">
+                    <div class="form-group">
+                        <label>Image Files</label>
+                        <input type="file" id="upload-images" multiple accept="image/*">
+                    </div>
+                    <div class="form-group" id="upload-labels-group" style="display:none">
+                        <label>Label Files (.txt)</label>
+                        <input type="file" id="upload-labels" multiple accept=".txt">
+                    </div>
+                    <button class="btn btn-primary" onclick="startImportUpload()">Upload & Import</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================= -->
+        <!-- TRAINING TAB -->
+        <!-- ============================================================= -->
+        <div id="panel-training" class="tab-panel">
+            <div class="card">
+                <h2>Start Training</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Workspace</label>
+                        <select id="train-ws" class="ws-selector">
+                            <option value="">-- Select workspace --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Model Size</label>
+                        <select id="train-artifact">
+                            <option value="small">Small (fast)</option>
+                            <option value="normal" selected>Normal</option>
+                            <option value="large">Large (best)</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn btn-success" onclick="startTraining()">Start Training</button>
+            </div>
+
+            <div class="card">
+                <h2>Export Model</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Workspace</label>
+                        <select id="export-ws" class="ws-selector">
+                            <option value="">-- Select workspace --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Output Path (.vrws)</label>
+                        <input type="text" id="export-path" placeholder="C:\\exports\\model.vrws">
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="exportModel()">Export</button>
+            </div>
+        </div>
+
+        <!-- ============================================================= -->
+        <!-- JOBS TAB -->
+        <!-- ============================================================= -->
+        <div id="panel-jobs" class="tab-panel">
+            <div class="card">
+                <h2>Job Monitor</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Progress</th>
+                            <th>Message</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="jobs-tbody">
+                        <tr><td colspan="6" class="empty">No jobs yet</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="/app.js"></script>
+</body>
+</html>

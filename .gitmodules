@@ -1,0 +1,3 @@
+[submodule "VidiImportAnnotation"]
+	path = VidiImportAnnotation
+	url = https://github.com/evefall/VidiImportAnnotation.git
