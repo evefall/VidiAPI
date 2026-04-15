@@ -446,7 +446,7 @@ async function loadDrives() {
 async function loadBrowserPath(path) {
     try {
         browserCurrentPath = path;
-        const data = await api.get(`/api/v1/browse/path?path=${encodeURIComponent(path)}`);
+        const data = await api.get(`/api/v1/browse/path?dir_path=${encodeURIComponent(path)}`);
 
         document.getElementById('browser-path').textContent = data.current_path;
 
@@ -473,7 +473,7 @@ async function loadBrowserPath(path) {
 
 async function loadImageCount(path) {
     try {
-        const data = await api.get(`/api/v1/browse/images?path=${encodeURIComponent(path)}`);
+        const data = await api.get(`/api/v1/browse/images?dir_path=${encodeURIComponent(path)}`);
         const countDiv = document.getElementById('browser-image-count');
         const countText = document.getElementById('browser-count-text');
 
