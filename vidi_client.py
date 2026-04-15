@@ -327,6 +327,38 @@ async def get_job(job_id: str):
 
 
 # ---------------------------------------------------------------------------
+# Passthrough proxy for all /api/v1/* routes not explicitly handled above
+# (viewer, browse, and any future remote endpoints)
+# ---------------------------------------------------------------------------
+
+@app.api_route("/api/v1/{rest_of_path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+async def proxy_v1(rest_of_path: str, request: Request):
+    """Forward any /api/v1/* request directly to the remote ViDi server."""
+    url = f"{_base_url()}/api/v1/{rest_of_path}"
+    params = dict(request.query_params)
+    body = await request.body()
+    headers = {k: v for k, v in request.headers.items()
+               if k.lower() not in ("host", "content-length")}
+    try:
+        resp = await _client.request(
+            request.method, url,
+            params=params,
+            content=body,
+            headers=headers,
+        )
+        resp.raise_for_status()
+        return resp.json()
+    except httpx.ConnectError:
+        raise HTTPException(502, f"Cannot reach ViDi server at {_base_url()}")
+    except httpx.TimeoutException:
+        raise HTTPException(504, "ViDi server request timed out")
+    except httpx.HTTPStatusError as e:
+        ct = e.response.headers.get("content-type", "")
+        detail = e.response.json() if "json" in ct else e.response.text
+        raise HTTPException(e.response.status_code, detail=detail)
+
+
+# ---------------------------------------------------------------------------
 # Static files (MUST be last — catches all unmatched routes)
 # ---------------------------------------------------------------------------
 

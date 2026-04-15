@@ -80,6 +80,7 @@ function initTabs() {
             if (tab.dataset.tab === 'workspaces') loadWorkspaces();
             if (tab.dataset.tab === 'import') loadWorkspaces();
             if (tab.dataset.tab === 'training') loadWorkspaces();
+            if (tab.dataset.tab === 'viewer') loadWorkspaces();
             if (tab.dataset.tab === 'jobs') loadJobs();
         });
     });
@@ -213,8 +214,8 @@ async function loadWorkspaces() {
             </tr>`;
         }).join('');
 
-        // Also update workspace selectors (only open ones)
-        updateWorkspaceSelectors(open);
+        // Update selectors: open-only for import/training, all for viewer
+        updateWorkspaceSelectors(open, allWs);
     } catch (e) {
         showToast('Failed to load workspaces: ' + e.message, 'error');
     }
@@ -232,16 +233,28 @@ async function openWorkspaceDialog(name) {
     }
 }
 
-function updateWorkspaceSelectors(workspaces) {
-    const selectors = document.querySelectorAll('.ws-selector');
-    selectors.forEach(sel => {
+function updateWorkspaceSelectors(openWorkspaces, allWorkspaces) {
+    // .ws-selector gets only open workspaces (import, training, export)
+    document.querySelectorAll('.ws-selector').forEach(sel => {
         const current = sel.value;
         sel.innerHTML = '<option value="">-- Select workspace --</option>';
-        workspaces.forEach(w => {
+        openWorkspaces.forEach(w => {
             sel.innerHTML += `<option value="${w.name}">${w.name}</option>`;
         });
         if (current) sel.value = current;
     });
+
+    // #viewer-ws gets ALL workspaces (auto-opens when selected)
+    const viewerSel = document.getElementById('viewer-ws');
+    if (viewerSel && allWorkspaces) {
+        const current = viewerSel.value;
+        viewerSel.innerHTML = '<option value="">-- Select workspace --</option>';
+        allWorkspaces.forEach(w => {
+            const label = w.status === 'open' ? w.name : `${w.name} (stängd)`;
+            viewerSel.innerHTML += `<option value="${w.name}">${label}</option>`;
+        });
+        if (current) viewerSel.value = current;
+    }
 }
 
 async function createWorkspace() {
@@ -472,12 +485,21 @@ async function cancelJob(jobId) {
 async function loadImageAnnotations() {
     const ws = document.getElementById('viewer-ws').value;
     if (!ws) {
-        document.getElementById('viewer-tbody').innerHTML = '<tr><td colspan="4" class="empty">Select workspace</td></tr>';
+        document.getElementById('viewer-tbody').innerHTML = '<tr><td colspan="4" class="empty">Välj workspace</td></tr>';
         document.getElementById('viewer-stats').style.display = 'none';
         return;
     }
 
+    const tbody = document.getElementById('viewer-tbody');
+    tbody.innerHTML = '<tr><td colspan="4" class="empty">Laddar...</td></tr>';
+
     try {
+        // Auto-open workspace if not already open
+        const path = _wsPathMap[ws];
+        if (path) {
+            await api.post(`/api/workspaces/${ws}/open`, { path }).catch(() => {});
+        }
+
         const data = await api.get(`/api/v1/viewer/images?workspace=${encodeURIComponent(ws)}`);
         const stats = await api.get(`/api/v1/viewer/image-stats?workspace=${encodeURIComponent(ws)}`);
 
@@ -489,9 +511,8 @@ async function loadImageAnnotations() {
         document.getElementById('viewer-stats').style.display = 'block';
 
         // Render images table
-        const tbody = document.getElementById('viewer-tbody');
         if (data.images.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="empty">No images in workspace</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="empty">Inga bilder i workspace</td></tr>';
             return;
         }
 
@@ -509,7 +530,8 @@ async function loadImageAnnotations() {
         }).join('');
 
     } catch (e) {
-        showToast('Failed to load images: ' + e.message, 'error');
+        showToast('Kunde inte ladda bilder: ' + e.message, 'error');
+        tbody.innerHTML = `<tr><td colspan="4" class="empty" style="color:#dc2626">${e.message}</td></tr>`;
     }
 }
 
