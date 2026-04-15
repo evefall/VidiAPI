@@ -411,6 +411,98 @@ async function cancelJob(jobId) {
 }
 
 // ---------------------------------------------------------------------------
+// File Browser
+// ---------------------------------------------------------------------------
+let browserTarget = null;  // 'img' or 'lbl'
+let browserCurrentPath = null;
+
+async function openBrowser(target) {
+    browserTarget = target;
+    browserCurrentPath = target === 'img' ? document.getElementById('import-img-dir').value : document.getElementById('import-lbl-dir').value;
+    if (!browserCurrentPath) browserCurrentPath = 'C:\\';
+
+    document.getElementById('browser-modal').style.display = 'flex';
+    await loadDrives();
+    await loadBrowserPath(browserCurrentPath);
+}
+
+function closeBrowser() {
+    document.getElementById('browser-modal').style.display = 'none';
+    browserTarget = null;
+}
+
+async function loadDrives() {
+    try {
+        const drives = await api.get('/api/v1/browse/drives');
+        const drivesDiv = document.getElementById('browser-drives');
+        drivesDiv.innerHTML = drives.map(d =>
+            `<button class="drive-btn" onclick="loadBrowserPath('${d}\\\\')"><strong>${d}</strong></button>`
+        ).join('');
+    } catch (e) {
+        showToast('Failed to load drives: ' + e.message, 'error');
+    }
+}
+
+async function loadBrowserPath(path) {
+    try {
+        browserCurrentPath = path;
+        const data = await api.get(`/api/v1/browse/path?path=${encodeURIComponent(path)}`);
+
+        document.getElementById('browser-path').textContent = data.current_path;
+
+        let html = '';
+        if (data.parent_path) {
+            html += `<div class="browser-item folder" onclick="loadBrowserPath('${data.parent_path}')">📁 .. (parent)</div>`;
+        }
+
+        for (const item of data.items) {
+            if (item.is_dir) {
+                html += `<div class="browser-item folder" onclick="loadBrowserPath('${item.path}')">${item.name}</div>`;
+            }
+        }
+
+        document.getElementById('browser-list').innerHTML = html || '<div style="padding:8px;color:#999">Empty folder</div>';
+
+        // Load image count
+        await loadImageCount(path);
+
+    } catch (e) {
+        showToast('Browse failed: ' + e.message, 'error');
+    }
+}
+
+async function loadImageCount(path) {
+    try {
+        const data = await api.get(`/api/v1/browse/images?path=${encodeURIComponent(path)}`);
+        const countDiv = document.getElementById('browser-image-count');
+        const countText = document.getElementById('browser-count-text');
+
+        if (data.total > 0) {
+            const exts = Object.entries(data.by_extension)
+                .map(([ext, count]) => `${count}×${ext}`)
+                .join(', ');
+            countText.textContent = `✅ Found ${data.total} images: ${exts}`;
+            countDiv.style.display = 'block';
+            document.getElementById('browser-select-btn').style.display = 'block';
+        } else {
+            countDiv.style.display = 'none';
+            document.getElementById('browser-select-btn').style.display = 'none';
+        }
+    } catch (e) {
+        // Silently ignore count errors
+    }
+}
+
+function selectBrowserPath() {
+    if (browserTarget === 'img') {
+        document.getElementById('import-img-dir').value = browserCurrentPath;
+    } else if (browserTarget === 'lbl') {
+        document.getElementById('import-lbl-dir').value = browserCurrentPath;
+    }
+    closeBrowser();
+}
+
+// ---------------------------------------------------------------------------
 // Init
 // ---------------------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
