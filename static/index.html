@@ -21,6 +21,7 @@
         <div class="tab active" data-tab="connection">Connection</div>
         <div class="tab" data-tab="workspaces">Workspaces</div>
         <div class="tab" data-tab="import">Import</div>
+        <div class="tab" data-tab="viewer">Viewer</div>
         <div class="tab" data-tab="training">Training</div>
         <div class="tab" data-tab="jobs">Jobs</div>
     </div>
@@ -189,6 +190,60 @@
                         <input type="file" id="upload-labels" multiple accept=".txt">
                     </div>
                     <button class="btn btn-primary" onclick="startImportUpload()">Upload & Import</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================= -->
+        <!-- VIEWER TAB -->
+        <!-- ============================================================= -->
+        <div id="panel-viewer" class="tab-panel">
+            <div class="card">
+                <h2>Image Annotations Viewer</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Workspace</label>
+                        <select id="viewer-ws" class="ws-selector" onchange="loadImageAnnotations()">
+                            <option value="">-- Select workspace --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="viewer-stats" style="display:none;margin-bottom:16px">
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">
+                        <div style="padding:12px;background:#e8f5e9;border-radius:6px">
+                            <div style="font-size:24px;font-weight:bold;color:#2e7d32" id="stat-total">0</div>
+                            <div style="font-size:12px;color:#666">Total Images</div>
+                        </div>
+                        <div style="padding:12px;background:#c8e6c9;border-radius:6px">
+                            <div style="font-size:24px;font-weight:bold;color:#388e3c" id="stat-good">0</div>
+                            <div style="font-size:12px;color:#666">Good Images</div>
+                        </div>
+                        <div style="padding:12px;background:#ffebee;border-radius:6px">
+                            <div style="font-size:24px;font-weight:bold;color:#d32f2f" id="stat-bad">0</div>
+                            <div style="font-size:12px;color:#666">Bad Images</div>
+                        </div>
+                        <div style="padding:12px;background:#fff3e0;border-radius:6px">
+                            <div style="font-size:24px;font-weight:bold;color:#f57c00" id="stat-annot">0</div>
+                            <div style="font-size:12px;color:#666">Annotations</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="overflow-x:auto">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Image Name</th>
+                                <th>Class</th>
+                                <th>Size</th>
+                                <th>Annotations</th>
+                            </tr>
+                        </thead>
+                        <tbody id="viewer-tbody">
+                            <tr><td colspan="4" class="empty">Select workspace to view images</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>

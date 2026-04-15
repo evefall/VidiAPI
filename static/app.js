@@ -411,6 +411,53 @@ async function cancelJob(jobId) {
 }
 
 // ---------------------------------------------------------------------------
+// Image Viewer
+// ---------------------------------------------------------------------------
+async function loadImageAnnotations() {
+    const ws = document.getElementById('viewer-ws').value;
+    if (!ws) {
+        document.getElementById('viewer-tbody').innerHTML = '<tr><td colspan="4" class="empty">Select workspace</td></tr>';
+        document.getElementById('viewer-stats').style.display = 'none';
+        return;
+    }
+
+    try {
+        const data = await api.get(`/api/v1/viewer/images?workspace=${encodeURIComponent(ws)}`);
+        const stats = await api.get(`/api/v1/viewer/image-stats?workspace=${encodeURIComponent(ws)}`);
+
+        // Update stats
+        document.getElementById('stat-total').textContent = stats.total_images;
+        document.getElementById('stat-good').textContent = stats.good_images;
+        document.getElementById('stat-bad').textContent = stats.bad_images;
+        document.getElementById('stat-annot').textContent = stats.total_annotations;
+        document.getElementById('viewer-stats').style.display = 'block';
+
+        // Render images table
+        const tbody = document.getElementById('viewer-tbody');
+        if (data.images.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="empty">No images in workspace</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = data.images.map(img => {
+            const badgeBg = img.class === 'good' ? '#c8e6c9' : '#ffcdd2';
+            const badgeColor = img.class === 'good' ? '#2e7d32' : '#c62828';
+            const classLabel = img.class.toUpperCase();
+
+            return `<tr>
+                <td><code style="font-size:11px">${img.name}</code></td>
+                <td><span style="padding:4px 8px;background:${badgeBg};color:${badgeColor};border-radius:4px;font-weight:600;font-size:12px">${classLabel}</span></td>
+                <td>${img.width}×${img.height}</td>
+                <td style="font-size:12px;color:#666">${img.annotation_summary}</td>
+            </tr>`;
+        }).join('');
+
+    } catch (e) {
+        showToast('Failed to load images: ' + e.message, 'error');
+    }
+}
+
+// ---------------------------------------------------------------------------
 // File Browser
 // ---------------------------------------------------------------------------
 let browserTarget = null;  // 'img' or 'lbl'
