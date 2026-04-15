@@ -188,7 +188,7 @@ async def create_workspace(body: CreateWorkspaceBody):
 
 @app.post("/api/workspaces/{name}/open")
 async def open_workspace(name: str, body: OpenWorkspaceBody):
-    return await vidi_request("POST", f"/api/v1/workspaces/{name}/open", params={"path": body.path})
+    return await vidi_request("POST", f"/api/v1/workspaces/{name}/open", json=body.model_dump())
 
 
 @app.post("/api/workspaces/{name}/close")
