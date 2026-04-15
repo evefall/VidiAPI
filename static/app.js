@@ -166,25 +166,47 @@ async function loadGpuInfo() {
 // ---------------------------------------------------------------------------
 async function loadWorkspaces() {
     try {
-        const ws = await api.get('/api/workspaces');
+        const allWs = await api.get('/api/workspaces');
         const tbody = document.getElementById('ws-tbody');
-        if (ws.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="3" class="empty">No open workspaces</td></tr>';
+        if (allWs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="empty">No workspaces found</td></tr>';
             return;
         }
-        tbody.innerHTML = ws.map(w => `
-            <tr>
+
+        // Separate open and available
+        const open = allWs.filter(w => w.status === 'open');
+
+        tbody.innerHTML = allWs.map(w => {
+            const statusBadge = w.status === 'open'
+                ? '<span style="padding:2px 6px;background:#c8e6c9;color:#2e7d32;border-radius:3px;font-size:12px;font-weight:600">OPEN</span>'
+                : '<span style="padding:2px 6px;background:#e0e0e0;color:#666;border-radius:3px;font-size:12px">available</span>';
+
+            const actionBtn = w.status === 'open'
+                ? `<button class="btn btn-danger btn-sm" onclick="closeWorkspace('${w.name}')">Close</button>`
+                : `<button class="btn btn-success btn-sm" onclick="openWorkspaceDialog('${w.name}', '${w.path}')">Open</button>`;
+
+            return `<tr>
                 <td><strong>${w.name}</strong></td>
                 <td style="font-size:12px;color:#64748b">${w.path}</td>
-                <td>
-                    <button class="btn btn-danger btn-sm" onclick="closeWorkspace('${w.name}')">Close</button>
-                </td>
-            </tr>
-        `).join('');
-        // Also update workspace selectors in other tabs
-        updateWorkspaceSelectors(ws);
+                <td>${statusBadge}</td>
+                <td>${actionBtn}</td>
+            </tr>`;
+        }).join('');
+
+        // Also update workspace selectors (only open ones)
+        updateWorkspaceSelectors(open);
     } catch (e) {
         showToast('Failed to load workspaces: ' + e.message, 'error');
+    }
+}
+
+async function openWorkspaceDialog(name, path) {
+    try {
+        await api.post(`/api/workspaces/${name}/open`, { path });
+        showToast(`Workspace "${name}" opened`, 'success');
+        loadWorkspaces();
+    } catch (e) {
+        showToast('Failed to open workspace: ' + e.message, 'error');
     }
 }
 
