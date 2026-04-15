@@ -44,6 +44,14 @@ const api = {
         }
         return resp.json();
     },
+    async delete(path) {
+        const resp = await fetch(path, { method: 'DELETE' });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+            throw new Error(typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail));
+        }
+        return resp.json();
+    },
 };
 
 // ---------------------------------------------------------------------------
@@ -191,9 +199,11 @@ async function loadWorkspaces() {
 
             // Pass only the name — path is looked up from _wsPathMap to avoid
             // backslash escaping issues with Windows paths in onclick strings
-            const actionBtn = w.status === 'open'
-                ? `<button class="btn btn-danger btn-sm" onclick="closeWorkspace('${w.name}')">Close</button>`
+            const toggleBtn = w.status === 'open'
+                ? `<button class="btn btn-secondary btn-sm" onclick="closeWorkspace('${w.name}')">Close</button>`
                 : `<button class="btn btn-success btn-sm" onclick="openWorkspaceDialog('${w.name}')">Open</button>`;
+            const actionBtn = toggleBtn +
+                ` <button class="btn btn-danger btn-sm" onclick="deleteWorkspace('${w.name}')" title="Radera permanent">Delete</button>`;
 
             return `<tr>
                 <td><strong>${w.name}</strong></td>
@@ -256,6 +266,18 @@ async function closeWorkspace(name) {
         loadWorkspaces();
     } catch (e) {
         showToast('Failed to close workspace: ' + e.message, 'error');
+    }
+}
+
+async function deleteWorkspace(name) {
+    if (!confirm(`Ta bort workspace "${name}"?\n\nDetta raderar alla filer permanent och kan inte ångras.`)) return;
+    try {
+        await api.delete(`/api/workspaces/${name}`);
+        showToast(`Workspace "${name}" raderat`, 'success');
+        delete _wsPathMap[name];
+        loadWorkspaces();
+    } catch (e) {
+        showToast('Kunde inte radera workspace: ' + e.message, 'error');
     }
 }
 

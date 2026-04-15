@@ -199,6 +199,11 @@ async def close_workspace(name: str):
     return await vidi_request("POST", f"/api/v1/workspaces/{name}/close")
 
 
+@app.delete("/api/workspaces/{name}")
+async def delete_workspace(name: str):
+    return await vidi_request("DELETE", f"/api/v1/workspaces/{name}")
+
+
 # ---------------------------------------------------------------------------
 # Import (server paths)
 # ---------------------------------------------------------------------------
