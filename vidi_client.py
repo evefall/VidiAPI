@@ -15,7 +15,7 @@ from typing import Optional
 
 import aiofiles
 import httpx
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -187,7 +187,10 @@ async def create_workspace(body: CreateWorkspaceBody):
 
 
 @app.post("/api/workspaces/{name}/open")
-async def open_workspace(name: str, body: OpenWorkspaceBody):
+async def open_workspace(name: str, request: Request):
+    """Open an existing workspace from disk."""
+    body_data = await request.json()
+    body = OpenWorkspaceBody(**body_data)
     return await vidi_request("POST", f"/api/v1/workspaces/{name}/open", json=body.model_dump())
 
 

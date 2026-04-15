@@ -164,6 +164,11 @@ async function loadGpuInfo() {
 // ---------------------------------------------------------------------------
 // Workspaces tab
 // ---------------------------------------------------------------------------
+
+// Store workspace data globally so onclick handlers can look up paths safely
+// (avoids backslash escaping issues in inline HTML onclick attributes)
+const _wsPathMap = {};
+
 async function loadWorkspaces() {
     try {
         const allWs = await api.get('/api/workspaces');
@@ -173,6 +178,9 @@ async function loadWorkspaces() {
             return;
         }
 
+        // Cache paths by name
+        allWs.forEach(w => { _wsPathMap[w.name] = w.path; });
+
         // Separate open and available
         const open = allWs.filter(w => w.status === 'open');
 
@@ -181,9 +189,11 @@ async function loadWorkspaces() {
                 ? '<span style="padding:2px 6px;background:#c8e6c9;color:#2e7d32;border-radius:3px;font-size:12px;font-weight:600">OPEN</span>'
                 : '<span style="padding:2px 6px;background:#e0e0e0;color:#666;border-radius:3px;font-size:12px">available</span>';
 
+            // Pass only the name — path is looked up from _wsPathMap to avoid
+            // backslash escaping issues with Windows paths in onclick strings
             const actionBtn = w.status === 'open'
                 ? `<button class="btn btn-danger btn-sm" onclick="closeWorkspace('${w.name}')">Close</button>`
-                : `<button class="btn btn-success btn-sm" onclick="openWorkspaceDialog('${w.name}', '${w.path}')">Open</button>`;
+                : `<button class="btn btn-success btn-sm" onclick="openWorkspaceDialog('${w.name}')">Open</button>`;
 
             return `<tr>
                 <td><strong>${w.name}</strong></td>
@@ -200,7 +210,9 @@ async function loadWorkspaces() {
     }
 }
 
-async function openWorkspaceDialog(name, path) {
+async function openWorkspaceDialog(name) {
+    const path = _wsPathMap[name];
+    if (!path) { showToast(`No path found for workspace "${name}"`, 'error'); return; }
     try {
         await api.post(`/api/workspaces/${name}/open`, { path });
         showToast(`Workspace "${name}" opened`, 'success');
