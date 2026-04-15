@@ -263,7 +263,10 @@ async function startImportServer() {
         tool_type: toolType,
     };
 
-    if (!good) {
+    if (good) {
+        // Good import: use image_dir as label_dir — no matching .txt files = no annotations
+        body.label_dir = imageDir;
+    } else {
         const labelDir = document.getElementById('import-lbl-dir').value.trim();
         if (!labelDir) { showToast('Label directory is required for bad images', 'error'); return; }
         body.label_dir = labelDir;
