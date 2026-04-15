@@ -209,6 +209,11 @@
                     </div>
                 </div>
 
+                <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+                    <button class="btn btn-secondary" onclick="loadImageAnnotations()">🔄 Uppdatera</button>
+                    <button class="btn btn-success" onclick="labelAllGood()" id="btn-label-good" title="Märk alla bilder i workspace som 'good' (normal) träningssampel i ViDi">✅ Märk alla som Good</button>
+                </div>
+
                 <div id="viewer-stats" style="display:none;margin-bottom:16px">
                     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">
                         <div style="padding:12px;background:#e8f5e9;border-radius:6px">

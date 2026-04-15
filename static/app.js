@@ -535,6 +535,47 @@ async function loadImageAnnotations() {
     }
 }
 
+async function labelAllGood() {
+    const ws = document.getElementById('viewer-ws').value;
+    if (!ws) { showToast('Välj ett workspace först', 'error'); return; }
+
+    if (!confirm(
+        `Märk alla bilder i "${ws}" som GOOD?\n\n` +
+        `Bilder utan defektannoteringar är redan good i ViDi Red Analyze.\n` +
+        `Den här funktionen använder ViDis explicita märk-API om det finns tillgängligt.`
+    )) return;
+
+    const btn = document.getElementById('btn-label-good');
+    const origText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ Märker...';
+
+    try {
+        const stream = 'default';
+        const tool = 'Analyze';
+        const r = await api.post(
+            `/api/v1/workspaces/${encodeURIComponent(ws)}/label-all-good?stream=${stream}&tool=${tool}`
+        );
+
+        let msg = `✅ ${r.labeled} bilder märkta som good`;
+        if (r.skipped_no_api > 0) {
+            msg = `ℹ️ ${r.total} bilder är already good (DLL saknar explicit märk-API)`;
+        }
+        if (r.errors && r.errors.length > 0) {
+            msg += ` (${r.errors.length} fel)`;
+            showToast(msg, 'error');
+        } else {
+            showToast(msg, 'success');
+        }
+        await loadImageAnnotations();
+    } catch (e) {
+        showToast('Märkning misslyckades: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = origText;
+    }
+}
+
 // ---------------------------------------------------------------------------
 // File Browser
 // ---------------------------------------------------------------------------
